@@ -107,6 +107,7 @@ const _activityNames = <String>[
   'guardar',
   'hablar',
   'hacer',
+  'hacer pipí',
   'ir',
   'jugar',
   'mirar',
