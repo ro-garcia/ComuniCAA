@@ -1,0 +1,38 @@
+{
+    "name": "ComuniCAA",
+    "short_name": "ComuniCAA",
+    "id": "./?v=icon3",
+    "start_url": "./?v=icon3",
+    "display": "standalone",
+    "background_color": "#50FCFC",
+    "theme_color": "#0175C2",
+    "description": "ComuniCAA",
+    "orientation": "portrait-primary",
+    "prefer_related_applications": false,
+    "icons": [
+        {
+            "src": "icons/Icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "icons/Icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "icons/Icon-maskable-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "icons/Icon-maskable-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any maskable"
+        }
+    ]
+}

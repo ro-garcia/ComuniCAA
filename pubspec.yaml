@@ -1,0 +1,32 @@
+name: comunicaa
+description: Prototipo frontend de Comunicacion Aumentativa y Alternativa con pictogramas reales.
+publish_to: "none"
+version: 0.1.0+1
+
+environment:
+  sdk: ">=3.3.0 <4.0.0"
+
+dependencies:
+  audioplayers: ^6.8.1
+  flutter:
+    sdk: flutter
+  flutter_svg: ^2.0.10+1
+  flutter_tts: ^4.2.5
+  image_picker: ^1.1.2
+  path_provider: ^2.1.4
+  provider: ^6.1.2
+  web: ^1.1.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/audio/pictograms/
+    - assets/categories/
+    - assets/pictograms/imported/
+    - assets/placeholders/

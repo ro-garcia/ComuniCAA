@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <!--
+    If you are serving your web app in a path other than the root, change the
+    href value below to reflect the base path you are serving from.
+
+    The path provided below has to start and end with a slash "/" in order for
+    it to work correctly.
+
+    For more details:
+    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
+
+    This is a placeholder for base href that will be replaced by the value of
+    the `--base-href` argument provided to `flutter build`.
+  -->
+  <base href="$FLUTTER_BASE_HREF">
+
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="A new Flutter project.">
+
+  <!-- iOS meta tags & icons -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="ComuniCAA">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png?v=3">
+  <meta name="msapplication-TileColor" content="#50FCFC">
+  <meta name="msapplication-TileImage" content="icons/Icon-192.png?v=3">
+
+  <!-- Favicon -->
+  <link rel="shortcut icon" href="favicon.ico?v=3">
+  <link rel="icon" href="favicon.ico?v=3" sizes="any">
+  <link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16.png?v=3">
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon.png?v=3">
+  <link rel="icon" type="image/png" sizes="48x48" href="icons/favicon-48.png?v=3">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/Icon-192.png?v=3">
+
+  <title>ComuniCAA</title>
+  <link rel="manifest" href="manifest.json?v=3">
+  <script>
+    (function () {
+      var isLocal = location.hostname === '127.0.0.1' ||
+        location.hostname === 'localhost';
+
+      if (!isLocal) return;
+
+      async function clearFlutterLocalCache() {
+        try {
+          if ('serviceWorker' in navigator) {
+            var registrations = await navigator.serviceWorker.getRegistrations();
+            await Promise.all(registrations.map(function (registration) {
+              return registration.unregister();
+            }));
+          }
+
+          if ('caches' in window) {
+            var keys = await caches.keys();
+            await Promise.all(keys.map(function (key) {
+              return caches.delete(key);
+            }));
+          }
+        } catch (error) {
+          console.warn('No se pudo limpiar el cache local de Flutter', error);
+        }
+      }
+
+      window.comunicaaClearFlutterLocalCache = clearFlutterLocalCache;
+      clearFlutterLocalCache();
+    })();
+  </script>
+  <script>
+    (function () {
+      var audioContext = null;
+      var activeSource = null;
+      var playbackId = 0;
+
+      function getAudioContext() {
+        var AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContext) {
+          throw new Error('Este navegador no soporta Web Audio API');
+        }
+
+        audioContext = audioContext || new AudioContext();
+        return audioContext;
+      }
+
+      async function primeAudio() {
+        var context = getAudioContext();
+        if (context.state === 'suspended') {
+          await context.resume();
+        }
+      }
+
+      function stopAudioSequence() {
+        playbackId += 1;
+        if (!activeSource) return;
+
+        try {
+          activeSource.stop();
+        } catch (_) {}
+
+        try {
+          activeSource.disconnect();
+        } catch (_) {}
+
+        activeSource = null;
+      }
+
+      function assetUrl(audioPath) {
+        var normalized = String(audioPath || '').replace(/\\/g, '/')
+          .replace(/^\/+/, '');
+        var assetKey = normalized.indexOf('assets/') === 0
+          ? normalized
+          : 'assets/' + normalized;
+        var encodedKey = assetKey.split('/').map(encodeURIComponent).join('/');
+        return new URL('assets/' + encodedKey, document.baseURI).toString();
+      }
+
+      async function loadAudioBuffer(context, audioPath) {
+        var response = await fetch(assetUrl(audioPath), { cache: 'reload' });
+        if (!response.ok) {
+          throw new Error('No se pudo cargar ' + audioPath);
+        }
+
+        var data = await response.arrayBuffer();
+        return await context.decodeAudioData(data.slice(0));
+      }
+
+      function combineBuffers(context, buffers) {
+        var channelCount = Math.min(2, Math.max.apply(
+          Math,
+          buffers.map(function (buffer) {
+            return Math.max(1, buffer.numberOfChannels);
+          })
+        ));
+        var gapLength = Math.round(context.sampleRate * 0.08);
+        var totalLength = buffers.reduce(function (length, buffer) {
+          return length + buffer.length;
+        }, 0) + gapLength * Math.max(0, buffers.length - 1);
+        var output = context.createBuffer(
+          channelCount,
+          Math.max(1, totalLength),
+          context.sampleRate
+        );
+        var offset = 0;
+
+        buffers.forEach(function (buffer) {
+          for (var channel = 0; channel < channelCount; channel += 1) {
+            var sourceChannel = Math.min(channel, buffer.numberOfChannels - 1);
+            output.copyToChannel(
+              buffer.getChannelData(sourceChannel),
+              channel,
+              offset
+            );
+          }
+          offset += buffer.length + gapLength;
+        });
+
+        return output;
+      }
+
+      function waitForSource(source, durationSeconds) {
+        return new Promise(function (resolve) {
+          var timeout = Math.min(
+            Math.max(Math.round(durationSeconds * 1000) + 400, 700),
+            30000
+          );
+          var timer = setTimeout(resolve, timeout);
+          source.onended = function () {
+            clearTimeout(timer);
+            resolve();
+          };
+        });
+      }
+
+      async function playAudioSequence(audioPaths) {
+        var context = getAudioContext();
+        stopAudioSequence();
+        var runId = playbackId;
+
+        if (context.state === 'suspended') {
+          await context.resume();
+        }
+
+        var paths = Array.from(audioPaths || []);
+        var buffers = [];
+        for (var index = 0; index < paths.length; index += 1) {
+          buffers.push(await loadAudioBuffer(context, paths[index]));
+        }
+
+        if (runId !== playbackId || buffers.length === 0) return;
+
+        var output = combineBuffers(context, buffers);
+        var source = context.createBufferSource();
+        source.buffer = output;
+        source.connect(context.destination);
+        activeSource = source;
+        source.start();
+
+        await waitForSource(source, output.duration);
+        if (runId === playbackId) {
+          activeSource = null;
+        }
+      }
+
+      window.comunicaaPrimeAudio = primeAudio;
+      window.comunicaaStopAudioSequence = stopAudioSequence;
+      window.comunicaaPlayAudioSequence = playAudioSequence;
+    })();
+  </script>
+</head>
+<body>
+  <!--
+    You can customize the "flutter_bootstrap.js" script.
+    This is useful to provide a custom configuration to the Flutter loader
+    or to give the user feedback during the initialization process.
+
+    For more details:
+    * https://docs.flutter.dev/platform-integration/web/initialization
+  -->
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>
