@@ -7,6 +7,11 @@ import '../models/pictogram.dart';
 import 'pictogram_audio_sequence_player_stub.dart'
     if (dart.library.html) 'pictogram_audio_sequence_player_web.dart';
 
+typedef PictogramPlaybackCallback = void Function(
+  int index,
+  Pictogram pictogram,
+);
+
 class PictogramAudioResult {
   const PictogramAudioResult({
     required this.total,
@@ -63,8 +68,10 @@ class PictogramAudioService {
   }
 
   static Future<PictogramAudioResult> playSequence(
-    List<Pictogram> pictograms,
-  ) async {
+    List<Pictogram> pictograms, {
+    PictogramPlaybackCallback? onPictogramStarted,
+    PictogramPlaybackCallback? onPictogramFinished,
+  }) async {
     if (pictograms.isEmpty) {
       return const PictogramAudioResult(total: 0, played: 0);
     }
@@ -76,9 +83,11 @@ class PictogramAudioService {
     var played = 0;
     final missingLabels = <String>[];
 
-    for (final pictogram in pictograms) {
+    for (var index = 0; index < pictograms.length; index++) {
+      final pictogram = pictograms[index];
       if (runId != _playbackRunId) break;
 
+      onPictogramStarted?.call(index, pictogram);
       final audioPath = _normalizedAudioPath(pictogram);
       var didPlay = false;
       if (audioPath != null &&
@@ -96,6 +105,8 @@ class PictogramAudioService {
       } else {
         missingLabels.add(pictogram.label);
       }
+
+      onPictogramFinished?.call(index, pictogram);
     }
 
     return PictogramAudioResult(

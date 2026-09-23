@@ -10,10 +10,18 @@ import '../services/pictogram_audio_service.dart';
 import 'bar_resize_handle.dart';
 import 'message_pictogram.dart';
 
-class MessageBar extends StatelessWidget {
+class MessageBar extends StatefulWidget {
   const MessageBar({super.key, this.forceVisible = false});
 
   final bool forceVisible;
+
+  @override
+  State<MessageBar> createState() => _MessageBarState();
+}
+
+class _MessageBarState extends State<MessageBar> {
+  int? _activePartIndex;
+  int _playbackRunId = 0;
 
   @override
   Widget build(BuildContext context) {
@@ -22,12 +30,10 @@ class MessageBar extends StatelessWidget {
     final colors = Theme.of(context).colorScheme;
     final sentence = communication.getSentence();
     final canSpeak = communication.hasMessage && sentence.trim().isNotEmpty;
-    final messageParts = communication.messageParts
-        .where(
-          (part) =>
-              part.pictogram == null || settings.showMessagePictograms,
-        )
-        .toList();
+    final messageParts = _visibleMessageParts(
+      communication.messageParts,
+      showPictograms: settings.showMessagePictograms,
+    );
     final dense = settings.boardDensity == BoardDensity.dense;
     final barScale = settings.messageBarScale;
     final baseHeight = dense ? 94.0 : 116.0;
@@ -36,7 +42,7 @@ class MessageBar extends StatelessWidget {
     final isExpanded = barScale > SettingsProvider.defaultMessageBarScale;
     final isAtMaximum = barScale >= SettingsProvider.maxMessageBarScale - 0.01;
 
-    if (!forceVisible && !settings.showMessageBar) {
+    if (!widget.forceVisible && !settings.showMessageBar) {
       return const SizedBox.shrink();
     }
 
@@ -72,7 +78,8 @@ class MessageBar extends StatelessWidget {
                             separatorBuilder: (_, __) =>
                                 const SizedBox(width: 8),
                             itemBuilder: (context, index) {
-                              final part = messageParts[index];
+                              final visiblePart = messageParts[index];
+                              final part = visiblePart.part;
                               if (part.pictogram == null) {
                                 return _ManualMessageItem(
                                   text: part.text ?? '',
@@ -84,6 +91,8 @@ class MessageBar extends StatelessWidget {
                               return MessagePictogram(
                                 pictogram: part.pictogram!,
                                 scale: barScale,
+                                isPlaying:
+                                    _activePartIndex == visiblePart.index,
                                 onSpeak: () =>
                                     speakMessage(context, sentence),
                               );
@@ -176,27 +185,49 @@ class MessageBar extends StatelessWidget {
     String sentence,
   ) async {
     if (sentence.trim().isEmpty) return;
+    final playbackRunId = ++_playbackRunId;
     final view = View.of(context);
     final direction = Directionality.of(context);
     final parts = context.read<CommunicationProvider>().messageParts;
     final pictogramRun = <Pictogram>[];
+    final pictogramRunIndexes = <int>[];
     final failedText = <String>[];
     var playedAny = false;
 
     Future<void> playPictogramRun() async {
       if (pictogramRun.isEmpty) return;
-      final result = await PictogramAudioService.playSequence(pictogramRun);
+      final result = await PictogramAudioService.playSequence(
+        pictogramRun,
+        onPictogramStarted: (runIndex, _) {
+          if (!mounted || playbackRunId != _playbackRunId) return;
+          setState(() => _activePartIndex = pictogramRunIndexes[runIndex]);
+        },
+        onPictogramFinished: (runIndex, _) {
+          if (!mounted || playbackRunId != _playbackRunId) return;
+          final partIndex = pictogramRunIndexes[runIndex];
+          if (_activePartIndex == partIndex) {
+            setState(() => _activePartIndex = null);
+          }
+        },
+      );
       playedAny = playedAny || result.playedAny;
       pictogramRun.clear();
+      pictogramRunIndexes.clear();
     }
 
-    for (final part in parts) {
+    for (var index = 0; index < parts.length; index++) {
+      if (playbackRunId != _playbackRunId) break;
+      final part = parts[index];
       if (part.pictogram != null) {
         pictogramRun.add(part.pictogram!);
+        pictogramRunIndexes.add(index);
         continue;
       }
 
       await playPictogramRun();
+      if (mounted && playbackRunId == _playbackRunId) {
+        setState(() => _activePartIndex = null);
+      }
       final text = part.text?.trim() ?? '';
       if (text.isEmpty) continue;
       final didPlay = await PictogramAudioService.playText(text);
@@ -207,6 +238,8 @@ class MessageBar extends StatelessWidget {
       }
     }
     await playPictogramRun();
+    if (!mounted || playbackRunId != _playbackRunId) return;
+    setState(() => _activePartIndex = null);
 
     if (failedText.isNotEmpty) {
       SemanticsService.sendAnnouncement(view, failedText.join(' '), direction);
@@ -214,6 +247,29 @@ class MessageBar extends StatelessWidget {
       SemanticsService.sendAnnouncement(view, sentence, direction);
     }
   }
+
+  List<_VisibleMessagePart> _visibleMessageParts(
+    List<CommunicationPart> parts, {
+    required bool showPictograms,
+  }) {
+    final visibleParts = <_VisibleMessagePart>[];
+    for (var index = 0; index < parts.length; index++) {
+      final part = parts[index];
+      if (part.pictogram != null && !showPictograms) continue;
+      visibleParts.add(_VisibleMessagePart(index: index, part: part));
+    }
+    return visibleParts;
+  }
+}
+
+class _VisibleMessagePart {
+  const _VisibleMessagePart({
+    required this.index,
+    required this.part,
+  });
+
+  final int index;
+  final CommunicationPart part;
 }
 
 class _ManualMessageItem extends StatelessWidget {
