@@ -21,11 +21,13 @@ class CommunicationScreen extends StatefulWidget {
   const CommunicationScreen({
     super.key,
     this.isCreatingPictogram = false,
+    required this.viewResetToken,
     required this.onCreateSaved,
     required this.onCreateCancel,
   });
 
   final bool isCreatingPictogram;
+  final int viewResetToken;
   final VoidCallback onCreateSaved;
   final VoidCallback onCreateCancel;
 
@@ -40,6 +42,14 @@ class _CommunicationScreenState extends State<CommunicationScreen> {
   final List<Pictogram> _folderPath = [];
 
   @override
+  void didUpdateWidget(covariant CommunicationScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.viewResetToken != oldWidget.viewResetToken) {
+      _resetView();
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final settings = context.watch<SettingsProvider>();
     final pictogramProvider = context.watch<PictogramProvider>();
@@ -52,13 +62,6 @@ class _CommunicationScreenState extends State<CommunicationScreen> {
         MessageBar(forceVisible: widget.isCreatingPictogram),
         if (settings.folderStripPlacement == FolderStripPlacement.top)
           _buildCategoryStrip(context),
-        if (settings.folderStripPlacement == FolderStripPlacement.top &&
-            _editingCategory != null)
-          CategoryEditorPanel(
-            category: _editingCategory!,
-            onSaved: () => setState(() => _editingCategory = null),
-            onCancel: () => setState(() => _editingCategory = null),
-          ),
         _BreadcrumbBar(
           selectedCategory: selectedCategory,
           folderPath: _folderPath,
@@ -76,13 +79,6 @@ class _CommunicationScreenState extends State<CommunicationScreen> {
         ),
         if (settings.folderStripPlacement == FolderStripPlacement.bottom)
           _buildCategoryStrip(context),
-        if (settings.folderStripPlacement == FolderStripPlacement.bottom &&
-            _editingCategory != null)
-          CategoryEditorPanel(
-            category: _editingCategory!,
-            onSaved: () => setState(() => _editingCategory = null),
-            onCancel: () => setState(() => _editingCategory = null),
-          ),
       ],
     );
   }
@@ -91,6 +87,8 @@ class _CommunicationScreenState extends State<CommunicationScreen> {
     return CategoryFolderStrip(
       onCategorySelected: (category) {
         setState(() {
+          _editingCategory = null;
+          _editingPictogram = null;
           _selectedCategory = category;
           _folderPath.clear();
         });
@@ -129,6 +127,14 @@ class _CommunicationScreenState extends State<CommunicationScreen> {
       );
     }
 
+    if (_editingCategory != null) {
+      return CategoryEditorPanel(
+        category: _editingCategory!,
+        onSaved: () => setState(() => _editingCategory = null),
+        onCancel: () => setState(() => _editingCategory = null),
+      );
+    }
+
     if (_editingPictogram != null) {
       return PictogramEditorPanel(
         pictogram: _editingPictogram!,
@@ -158,7 +164,10 @@ class _CommunicationScreenState extends State<CommunicationScreen> {
   }
 
   void _openCategoryEditor(CaaCategory category) {
-    setState(() => _editingCategory = category);
+    setState(() {
+      _editingPictogram = null;
+      _editingCategory = category;
+    });
   }
 
   void _openPictogramEditor(Pictogram pictogram) {
@@ -170,6 +179,8 @@ class _CommunicationScreenState extends State<CommunicationScreen> {
 
   void _goHome() {
     setState(() {
+      _editingCategory = null;
+      _editingPictogram = null;
       _selectedCategory = null;
       _folderPath.clear();
     });
@@ -177,6 +188,8 @@ class _CommunicationScreenState extends State<CommunicationScreen> {
 
   void _goToFolder(int index) {
     setState(() {
+      _editingCategory = null;
+      _editingPictogram = null;
       _selectedCategory = null;
       _folderPath.removeRange(index + 1, _folderPath.length);
     });
@@ -184,6 +197,8 @@ class _CommunicationScreenState extends State<CommunicationScreen> {
 
   void _openFolder(Pictogram folder) {
     setState(() {
+      _editingCategory = null;
+      _editingPictogram = null;
       _selectedCategory = null;
       final existingIndex = _folderPath.indexWhere(
         (item) => item.id == folder.id,
@@ -194,6 +209,13 @@ class _CommunicationScreenState extends State<CommunicationScreen> {
         _folderPath.removeRange(existingIndex + 1, _folderPath.length);
       }
     });
+  }
+
+  void _resetView() {
+    _selectedCategory = null;
+    _editingCategory = null;
+    _editingPictogram = null;
+    _folderPath.clear();
   }
 
   Future<void> _handlePictogramTap(

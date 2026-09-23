@@ -68,57 +68,75 @@ class _CategoryEditorPanelState extends State<CategoryEditorPanel> {
       margin: const EdgeInsets.fromLTRB(10, 8, 10, 8),
       child: Padding(
         padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    'Editar carpeta',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 0,
-                        ),
-                  ),
-                ),
-                IconButton(
-                  tooltip: 'Cerrar edición',
-                  onPressed: widget.onCancel,
-                  icon: const Icon(Icons.close),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: 440),
-              child: SingleChildScrollView(
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    final horizontal = constraints.maxWidth >= 720;
-                    final image = _buildImageColumn(context, preview);
-                    final fields = _buildFields(context);
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final scrollableContent = SingleChildScrollView(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final horizontal = constraints.maxWidth >= 720;
+                  final image = _buildImageColumn(context, preview);
+                  final fields = _buildFields(context);
 
-                    if (!horizontal) {
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [image, const SizedBox(height: 16), fields],
-                      );
-                    }
-
-                    return Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                  if (!horizontal) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        SizedBox(width: 220, child: image),
-                        const SizedBox(width: 20),
-                        Expanded(child: fields),
+                        image,
+                        const SizedBox(height: 16),
+                        fields,
                       ],
                     );
-                  },
-                ),
+                  }
+
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(width: 220, child: image),
+                      const SizedBox(width: 20),
+                      Expanded(child: fields),
+                    ],
+                  );
+                },
               ),
-            ),
-          ],
+            );
+            final content = constraints.maxHeight.isFinite
+                ? Expanded(child: scrollableContent)
+                : ConstrainedBox(
+                    constraints: const BoxConstraints(maxHeight: 340),
+                    child: scrollableContent,
+                  );
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Editar carpeta',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 0,
+                            ),
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: 'Cerrar edición',
+                      onPressed: widget.onCancel,
+                      icon: const Icon(Icons.close),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                content,
+                const SizedBox(height: 12),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: _buildActions(),
+                ),
+              ],
+            );
+          },
         ),
       ),
     );
@@ -244,26 +262,28 @@ class _CategoryEditorPanelState extends State<CategoryEditorPanel> {
                 )
                 .toList(),
           ),
-          const SizedBox(height: 16),
-          Wrap(
-            spacing: 10,
-            runSpacing: 8,
-            alignment: WrapAlignment.end,
-            children: [
-              OutlinedButton.icon(
-                icon: const Icon(Icons.close),
-                label: const Text('Cancelar'),
-                onPressed: widget.onCancel,
-              ),
-              FilledButton.icon(
-                icon: const Icon(Icons.save_outlined),
-                label: const Text('Guardar cambios'),
-                onPressed: _saveCategory,
-              ),
-            ],
-          ),
         ],
       ),
+    );
+  }
+
+  Widget _buildActions() {
+    return Wrap(
+      spacing: 10,
+      runSpacing: 8,
+      alignment: WrapAlignment.end,
+      children: [
+        OutlinedButton.icon(
+          icon: const Icon(Icons.close),
+          label: const Text('Cancelar'),
+          onPressed: widget.onCancel,
+        ),
+        FilledButton.icon(
+          icon: const Icon(Icons.save_outlined),
+          label: const Text('Guardar cambios'),
+          onPressed: _saveCategory,
+        ),
+      ],
     );
   }
 

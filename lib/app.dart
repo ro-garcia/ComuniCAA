@@ -50,6 +50,7 @@ class _MainShellState extends State<MainShell> {
   int _selectedIndex = 0;
   bool _creatingPictogram = false;
   bool _creatingFolder = false;
+  int _viewResetToken = 0;
 
   @override
   Widget build(BuildContext context) {
@@ -57,6 +58,7 @@ class _MainShellState extends State<MainShell> {
     final screens = <Widget>[
       CommunicationScreen(
         isCreatingPictogram: _creatingPictogram,
+        viewResetToken: _viewResetToken,
         onCreateSaved: () => _finishCreation(
           context,
           'Pictograma creado correctamente',
@@ -65,6 +67,7 @@ class _MainShellState extends State<MainShell> {
       ),
       CategoriesScreen(
         isCreatingFolder: _creatingFolder,
+        viewResetToken: _viewResetToken,
         onCreateSaved: () => _finishCreation(
           context,
           'Carpeta creada correctamente',
@@ -99,10 +102,9 @@ class _MainShellState extends State<MainShell> {
               padding: EdgeInsets.only(
                 bottom: _createButtonBottomOffset(settings),
               ),
-              child: FloatingActionButton.extended(
-                icon: const Icon(Icons.add),
-                label: Text(_selectedIndex == 1 ? 'Crear carpeta' : 'Crear'),
-                onPressed: () => _openEditor(context),
+              child: _CreateActions(
+                onCreateFolder: _openFolderCreator,
+                onCreatePictogram: _openPictogramCreator,
               ),
             )
           : null,
@@ -110,7 +112,8 @@ class _MainShellState extends State<MainShell> {
   }
 
   double _createButtonBottomOffset(SettingsProvider settings) {
-    if (settings.folderStripPlacement != FolderStripPlacement.bottom) {
+    if (_selectedIndex != 0 ||
+        settings.folderStripPlacement != FolderStripPlacement.bottom) {
       return 0;
     }
 
@@ -122,16 +125,19 @@ class _MainShellState extends State<MainShell> {
 
   bool get _isCreating => _creatingPictogram || _creatingFolder;
 
-  void _openEditor(BuildContext context) {
-    final creatingFolder = _selectedIndex == 1;
+  void _openPictogramCreator() {
     setState(() {
-      _clearCreation();
-      if (creatingFolder) {
-        _creatingFolder = true;
-      } else {
-        _selectedIndex = 0;
-        _creatingPictogram = true;
-      }
+      _resetOpenViews();
+      _selectedIndex = 0;
+      _creatingPictogram = true;
+    });
+  }
+
+  void _openFolderCreator() {
+    setState(() {
+      _resetOpenViews();
+      _selectedIndex = 1;
+      _creatingFolder = true;
     });
   }
 
@@ -152,6 +158,11 @@ class _MainShellState extends State<MainShell> {
     _creatingFolder = false;
   }
 
+  void _resetOpenViews() {
+    _clearCreation();
+    _viewResetToken++;
+  }
+
   void _enterEditorMode(BuildContext context) {
     final settings = context.read<SettingsProvider>();
     if (settings.isCaregiverMode) {
@@ -161,7 +172,7 @@ class _MainShellState extends State<MainShell> {
     }
     setState(() {
       _selectedIndex = 0;
-      _clearCreation();
+      _resetOpenViews();
     });
   }
 
@@ -170,7 +181,44 @@ class _MainShellState extends State<MainShell> {
     settings.enableCaregiverMode();
     setState(() {
       _selectedIndex = 4;
-      _clearCreation();
+      _resetOpenViews();
     });
+  }
+}
+
+class _CreateActions extends StatelessWidget {
+  const _CreateActions({
+    required this.onCreateFolder,
+    required this.onCreatePictogram,
+  });
+
+  final VoidCallback onCreateFolder;
+  final VoidCallback onCreatePictogram;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        FloatingActionButton.extended(
+          heroTag: 'create-folder',
+          backgroundColor: colors.secondaryContainer,
+          foregroundColor: colors.onSecondaryContainer,
+          icon: const Icon(Icons.create_new_folder_outlined),
+          label: const Text('Crear carpeta'),
+          onPressed: onCreateFolder,
+        ),
+        const SizedBox(height: 12),
+        FloatingActionButton.extended(
+          heroTag: 'create-pictogram',
+          icon: const Icon(Icons.add),
+          label: const Text('Crear pictograma'),
+          onPressed: onCreatePictogram,
+        ),
+      ],
+    );
   }
 }

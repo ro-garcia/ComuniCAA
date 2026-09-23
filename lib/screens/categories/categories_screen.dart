@@ -20,11 +20,13 @@ class CategoriesScreen extends StatefulWidget {
   const CategoriesScreen({
     super.key,
     this.isCreatingFolder = false,
+    required this.viewResetToken,
     required this.onCreateSaved,
     required this.onCreateCancel,
   });
 
   final bool isCreatingFolder;
+  final int viewResetToken;
   final VoidCallback onCreateSaved;
   final VoidCallback onCreateCancel;
 
@@ -36,6 +38,14 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
   CaaCategory? _selectedCategory;
   Pictogram? _selectedFolder;
   CaaCategory? _editingCategory;
+
+  @override
+  void didUpdateWidget(covariant CategoriesScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.viewResetToken != oldWidget.viewResetToken) {
+      _resetView();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -162,6 +172,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
 
   void _selectCategory(CaaCategory category) {
     setState(() {
+      _editingCategory = null;
       _selectedFolder = null;
       _selectedCategory = category;
     });
@@ -169,6 +180,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
 
   void _selectFolder(Pictogram folder) {
     setState(() {
+      _editingCategory = null;
       _selectedCategory = null;
       _selectedFolder = folder;
     });
@@ -176,6 +188,12 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
 
   void _openCategoryEditor(BuildContext context, CaaCategory category) {
     setState(() => _editingCategory = category);
+  }
+
+  void _resetView() {
+    _selectedCategory = null;
+    _selectedFolder = null;
+    _editingCategory = null;
   }
 
   Future<void> _handleTap(BuildContext context, Pictogram pictogram) async {
