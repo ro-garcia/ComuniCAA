@@ -20,13 +20,13 @@ class SettingsProvider extends ChangeNotifier {
   double _textScale = 1.0;
   bool _showTextOnPictograms = true;
   bool _highContrast = false;
-  bool _speakOnTap = false;
+  bool _speakOnTap = true;
   bool _showMessageBar = true;
   bool _showMessagePictograms = true;
   bool _largeButtons = false;
   bool _reduceAnimations = false;
   bool _simplifiedMode = false;
-  BoardDensity _boardDensity = BoardDensity.dense;
+  BoardDensity _boardDensity = BoardDensity.compact;
   FolderStripPlacement _folderStripPlacement = FolderStripPlacement.bottom;
   PictogramLabelPosition _pictogramLabelPosition = PictogramLabelPosition.top;
   bool _colorCodedCategories = true;
