@@ -107,7 +107,7 @@ const _activityNames = <String>[
   'guardar',
   'hablar',
   'hacer',
-  'hacer pis',
+  'hacer pipí',
   'ir',
   'jugar',
   'mirar',
@@ -134,7 +134,7 @@ const _initialBoardNames = <String>[
   'dibujar',
   'pintar',
   'no gritar',
-  'hacer pis',
+  'hacer pipí',
   'comer',
 ];
 
