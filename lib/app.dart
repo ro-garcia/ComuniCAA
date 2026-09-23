@@ -5,7 +5,6 @@ import 'models/app_settings.dart';
 import 'providers/settings_provider.dart';
 import 'screens/categories/categories_screen.dart';
 import 'screens/communication/communication_screen.dart';
-import 'screens/editor/pictogram_editor_screen.dart';
 import 'screens/keyboard/keyboard_screen.dart';
 import 'screens/search/search_screen.dart';
 import 'screens/settings/settings_screen.dart';
@@ -49,13 +48,29 @@ class MainShell extends StatefulWidget {
 
 class _MainShellState extends State<MainShell> {
   int _selectedIndex = 0;
+  bool _creatingPictogram = false;
+  bool _creatingFolder = false;
 
   @override
   Widget build(BuildContext context) {
     final settings = context.watch<SettingsProvider>();
     final screens = <Widget>[
-      const CommunicationScreen(),
-      const CategoriesScreen(),
+      CommunicationScreen(
+        isCreatingPictogram: _creatingPictogram,
+        onCreateSaved: () => _finishCreation(
+          context,
+          'Pictograma creado correctamente',
+        ),
+        onCreateCancel: _cancelCreation,
+      ),
+      CategoriesScreen(
+        isCreatingFolder: _creatingFolder,
+        onCreateSaved: () => _finishCreation(
+          context,
+          'Carpeta creada correctamente',
+        ),
+        onCreateCancel: _cancelCreation,
+      ),
       const SearchScreen(),
       const KeyboardScreen(),
       if (settings.isCaregiverMode) const SettingsScreen(),
@@ -71,12 +86,15 @@ class _MainShellState extends State<MainShell> {
         selectedIndex: _selectedIndex,
         editorMode: settings.isCaregiverMode,
         onDestinationSelected: (index) {
-          setState(() => _selectedIndex = index);
+          setState(() {
+            _selectedIndex = index;
+            _clearCreation();
+          });
         },
         onCustomizePressed: () => _enterEditorMode(context),
         onSettingsPressed: () => _openSettingsInCaregiverMode(context),
       ),
-      floatingActionButton: settings.isCaregiverMode
+      floatingActionButton: settings.isCaregiverMode && !_isCreating
           ? Padding(
               padding: EdgeInsets.only(
                 bottom: _createButtonBottomOffset(settings),
@@ -102,24 +120,36 @@ class _MainShellState extends State<MainShell> {
     return stripHeight + stripPadding + 8.0;
   }
 
-  Future<void> _openEditor(BuildContext context) async {
-    final creatingFolder = _selectedIndex == 1;
-    final created = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(
-        builder: (_) => PictogramEditorScreen(folderMode: creatingFolder),
-      ),
-    );
+  bool get _isCreating => _creatingPictogram || _creatingFolder;
 
-    if (!context.mounted || created != true) return;
+  void _openEditor(BuildContext context) {
+    final creatingFolder = _selectedIndex == 1;
+    setState(() {
+      _clearCreation();
+      if (creatingFolder) {
+        _creatingFolder = true;
+      } else {
+        _selectedIndex = 0;
+        _creatingPictogram = true;
+      }
+    });
+  }
+
+  void _finishCreation(BuildContext context, String message) {
+    setState(_clearCreation);
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          creatingFolder
-              ? 'Carpeta creada correctamente'
-              : 'Pictograma creado correctamente',
-        ),
-      ),
+      SnackBar(content: Text(message)),
     );
+  }
+
+  void _cancelCreation() {
+    setState(_clearCreation);
+  }
+
+  void _clearCreation() {
+    _creatingPictogram = false;
+    _creatingFolder = false;
   }
 
   void _enterEditorMode(BuildContext context) {
@@ -129,12 +159,18 @@ class _MainShellState extends State<MainShell> {
     } else {
       settings.enableCaregiverMode();
     }
-    setState(() => _selectedIndex = 0);
+    setState(() {
+      _selectedIndex = 0;
+      _clearCreation();
+    });
   }
 
   void _openSettingsInCaregiverMode(BuildContext context) {
     final settings = context.read<SettingsProvider>();
     settings.enableCaregiverMode();
-    setState(() => _selectedIndex = 4);
+    setState(() {
+      _selectedIndex = 4;
+      _clearCreation();
+    });
   }
 }

@@ -12,11 +12,21 @@ import '../../widgets/category_card.dart';
 import '../../widgets/category_editor_panel.dart';
 import '../../widgets/message_bar.dart';
 import '../../widgets/pictogram_action_sheet.dart';
+import '../../widgets/pictogram_creator_panel.dart';
 import '../../widgets/pictogram_folder_card.dart';
 import '../../widgets/pictogram_grid.dart';
 
 class CategoriesScreen extends StatefulWidget {
-  const CategoriesScreen({super.key});
+  const CategoriesScreen({
+    super.key,
+    this.isCreatingFolder = false,
+    required this.onCreateSaved,
+    required this.onCreateCancel,
+  });
+
+  final bool isCreatingFolder;
+  final VoidCallback onCreateSaved;
+  final VoidCallback onCreateCancel;
 
   @override
   State<CategoriesScreen> createState() => _CategoriesScreenState();
@@ -29,6 +39,21 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.isCreatingFolder) {
+      return Column(
+        children: [
+          const MessageBar(forceVisible: true),
+          Expanded(
+            child: PictogramCreatorPanel(
+              folderMode: true,
+              onSaved: widget.onCreateSaved,
+              onCancel: widget.onCreateCancel,
+            ),
+          ),
+        ],
+      );
+    }
+
     final selectedFolder = _selectedFolder;
     if (selectedFolder != null) {
       final pictograms = context.watch<PictogramProvider>().getFolderChildren(

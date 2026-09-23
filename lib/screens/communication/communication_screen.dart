@@ -13,11 +13,21 @@ import '../../widgets/category_editor_panel.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/message_bar.dart';
 import '../../widgets/pictogram_action_sheet.dart';
+import '../../widgets/pictogram_creator_panel.dart';
 import '../../widgets/pictogram_editor_panel.dart';
 import '../../widgets/pictogram_grid.dart';
 
 class CommunicationScreen extends StatefulWidget {
-  const CommunicationScreen({super.key});
+  const CommunicationScreen({
+    super.key,
+    this.isCreatingPictogram = false,
+    required this.onCreateSaved,
+    required this.onCreateCancel,
+  });
+
+  final bool isCreatingPictogram;
+  final VoidCallback onCreateSaved;
+  final VoidCallback onCreateCancel;
 
   @override
   State<CommunicationScreen> createState() => _CommunicationScreenState();
@@ -39,7 +49,7 @@ class _CommunicationScreenState extends State<CommunicationScreen> {
 
     return Column(
       children: [
-        const MessageBar(),
+        MessageBar(forceVisible: widget.isCreatingPictogram),
         if (settings.folderStripPlacement == FolderStripPlacement.top)
           _buildCategoryStrip(context),
         if (settings.folderStripPlacement == FolderStripPlacement.top &&
@@ -56,33 +66,13 @@ class _CommunicationScreenState extends State<CommunicationScreen> {
           onFolderPressed: _goToFolder,
         ),
         Expanded(
-          child: _editingPictogram != null
-              ? PictogramEditorPanel(
-                  pictogram: _editingPictogram!,
-                  onSaved: () => setState(() => _editingPictogram = null),
-                  onCancel: () => setState(() => _editingPictogram = null),
-                )
-              : activeFolder != null
-                  ? _FolderPictogramPanel(
-                      pictograms: pictogramProvider.getFolderChildren(
-                        activeFolder.id,
-                      ),
-                      onPictogramTap: (pictogram) =>
-                          _handlePictogramTap(context, pictogram),
-                      onPictogramLongPress: (pictogram) =>
-                          _handleLongPress(context, pictogram),
-                    )
-                  : selectedCategory == null
-                      ? _buildBoard(context, boardPictograms)
-                      : _CategoryPictogramPanel(
-                          pictograms: pictogramProvider.getByCategory(
-                            selectedCategory.id,
-                          ),
-                          onPictogramTap: (pictogram) =>
-                              _handlePictogramTap(context, pictogram),
-                          onPictogramLongPress: (pictogram) =>
-                              _handleLongPress(context, pictogram),
-                        ),
+          child: _buildContent(
+            context,
+            pictogramProvider: pictogramProvider,
+            boardPictograms: boardPictograms,
+            selectedCategory: selectedCategory,
+            activeFolder: activeFolder,
+          ),
         ),
         if (settings.folderStripPlacement == FolderStripPlacement.bottom)
           _buildCategoryStrip(context),
@@ -120,6 +110,48 @@ class _CommunicationScreenState extends State<CommunicationScreen> {
 
     return PictogramGrid(
       pictograms: pictograms,
+      onPictogramTap: (pictogram) => _handlePictogramTap(context, pictogram),
+      onPictogramLongPress: (pictogram) => _handleLongPress(context, pictogram),
+    );
+  }
+
+  Widget _buildContent(
+    BuildContext context, {
+    required PictogramProvider pictogramProvider,
+    required List<Pictogram> boardPictograms,
+    required CaaCategory? selectedCategory,
+    required Pictogram? activeFolder,
+  }) {
+    if (widget.isCreatingPictogram) {
+      return PictogramCreatorPanel(
+        onSaved: widget.onCreateSaved,
+        onCancel: widget.onCreateCancel,
+      );
+    }
+
+    if (_editingPictogram != null) {
+      return PictogramEditorPanel(
+        pictogram: _editingPictogram!,
+        onSaved: () => setState(() => _editingPictogram = null),
+        onCancel: () => setState(() => _editingPictogram = null),
+      );
+    }
+
+    if (activeFolder != null) {
+      return _FolderPictogramPanel(
+        pictograms: pictogramProvider.getFolderChildren(activeFolder.id),
+        onPictogramTap: (pictogram) => _handlePictogramTap(context, pictogram),
+        onPictogramLongPress: (pictogram) =>
+            _handleLongPress(context, pictogram),
+      );
+    }
+
+    if (selectedCategory == null) {
+      return _buildBoard(context, boardPictograms);
+    }
+
+    return _CategoryPictogramPanel(
+      pictograms: pictogramProvider.getByCategory(selectedCategory.id),
       onPictogramTap: (pictogram) => _handlePictogramTap(context, pictogram),
       onPictogramLongPress: (pictogram) => _handleLongPress(context, pictogram),
     );
