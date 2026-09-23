@@ -50,6 +50,7 @@ class _MainShellState extends State<MainShell> {
   int _selectedIndex = 0;
   bool _creatingPictogram = false;
   bool _creatingFolder = false;
+  bool _editingInline = false;
   int _viewResetToken = 0;
 
   @override
@@ -64,6 +65,7 @@ class _MainShellState extends State<MainShell> {
           'Pictograma creado correctamente',
         ),
         onCreateCancel: _cancelCreation,
+        onEditingChanged: _setInlineEditing,
       ),
       CategoriesScreen(
         isCreatingFolder: _creatingFolder,
@@ -73,6 +75,7 @@ class _MainShellState extends State<MainShell> {
           'Carpeta creada correctamente',
         ),
         onCreateCancel: _cancelCreation,
+        onEditingChanged: _setInlineEditing,
       ),
       const SearchScreen(),
       const KeyboardScreen(),
@@ -91,13 +94,13 @@ class _MainShellState extends State<MainShell> {
         onDestinationSelected: (index) {
           setState(() {
             _selectedIndex = index;
-            _clearCreation();
+            _resetOpenViews();
           });
         },
         onCustomizePressed: () => _enterEditorMode(context),
         onSettingsPressed: _openSettings,
       ),
-      floatingActionButton: settings.isCaregiverMode && !_isCreating
+      floatingActionButton: settings.isCaregiverMode && !_isCreatingOrEditing
           ? Padding(
               padding: EdgeInsets.only(
                 bottom: _createButtonBottomOffset(settings),
@@ -124,6 +127,7 @@ class _MainShellState extends State<MainShell> {
   }
 
   bool get _isCreating => _creatingPictogram || _creatingFolder;
+  bool get _isCreatingOrEditing => _isCreating || _editingInline;
 
   void _openPictogramCreator() {
     setState(() {
@@ -160,7 +164,13 @@ class _MainShellState extends State<MainShell> {
 
   void _resetOpenViews() {
     _clearCreation();
+    _editingInline = false;
     _viewResetToken++;
+  }
+
+  void _setInlineEditing(bool editing) {
+    if (_editingInline == editing) return;
+    setState(() => _editingInline = editing);
   }
 
   void _enterEditorMode(BuildContext context) {

@@ -24,12 +24,14 @@ class CommunicationScreen extends StatefulWidget {
     required this.viewResetToken,
     required this.onCreateSaved,
     required this.onCreateCancel,
+    required this.onEditingChanged,
   });
 
   final bool isCreatingPictogram;
   final int viewResetToken;
   final VoidCallback onCreateSaved;
   final VoidCallback onCreateCancel;
+  final ValueChanged<bool> onEditingChanged;
 
   @override
   State<CommunicationScreen> createState() => _CommunicationScreenState();
@@ -92,6 +94,7 @@ class _CommunicationScreenState extends State<CommunicationScreen> {
           _selectedCategory = category;
           _folderPath.clear();
         });
+        widget.onEditingChanged(false);
       },
       onCategoryLongPress: _openCategoryEditor,
       onFolderSelected: _openFolder,
@@ -130,16 +133,16 @@ class _CommunicationScreenState extends State<CommunicationScreen> {
     if (_editingCategory != null) {
       return CategoryEditorPanel(
         category: _editingCategory!,
-        onSaved: () => setState(() => _editingCategory = null),
-        onCancel: () => setState(() => _editingCategory = null),
+        onSaved: _closeCategoryEditor,
+        onCancel: _closeCategoryEditor,
       );
     }
 
     if (_editingPictogram != null) {
       return PictogramEditorPanel(
         pictogram: _editingPictogram!,
-        onSaved: () => setState(() => _editingPictogram = null),
-        onCancel: () => setState(() => _editingPictogram = null),
+        onSaved: _closePictogramEditor,
+        onCancel: _closePictogramEditor,
       );
     }
 
@@ -168,6 +171,7 @@ class _CommunicationScreenState extends State<CommunicationScreen> {
       _editingPictogram = null;
       _editingCategory = category;
     });
+    widget.onEditingChanged(true);
   }
 
   void _openPictogramEditor(Pictogram pictogram) {
@@ -175,6 +179,7 @@ class _CommunicationScreenState extends State<CommunicationScreen> {
       _editingCategory = null;
       _editingPictogram = pictogram;
     });
+    widget.onEditingChanged(true);
   }
 
   void _goHome() {
@@ -184,6 +189,7 @@ class _CommunicationScreenState extends State<CommunicationScreen> {
       _selectedCategory = null;
       _folderPath.clear();
     });
+    widget.onEditingChanged(false);
   }
 
   void _goToFolder(int index) {
@@ -193,6 +199,7 @@ class _CommunicationScreenState extends State<CommunicationScreen> {
       _selectedCategory = null;
       _folderPath.removeRange(index + 1, _folderPath.length);
     });
+    widget.onEditingChanged(false);
   }
 
   void _openFolder(Pictogram folder) {
@@ -209,6 +216,7 @@ class _CommunicationScreenState extends State<CommunicationScreen> {
         _folderPath.removeRange(existingIndex + 1, _folderPath.length);
       }
     });
+    widget.onEditingChanged(false);
   }
 
   void _resetView() {
@@ -216,6 +224,16 @@ class _CommunicationScreenState extends State<CommunicationScreen> {
     _editingCategory = null;
     _editingPictogram = null;
     _folderPath.clear();
+  }
+
+  void _closeCategoryEditor() {
+    setState(() => _editingCategory = null);
+    widget.onEditingChanged(_editingPictogram != null);
+  }
+
+  void _closePictogramEditor() {
+    setState(() => _editingPictogram = null);
+    widget.onEditingChanged(_editingCategory != null);
   }
 
   Future<void> _handlePictogramTap(
