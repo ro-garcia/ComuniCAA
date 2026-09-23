@@ -51,6 +51,7 @@ class _MainShellState extends State<MainShell> {
   bool _creatingPictogram = false;
   bool _creatingFolder = false;
   bool _editingInline = false;
+  int? _creationReturnIndex;
   int _viewResetToken = 0;
 
   @override
@@ -130,23 +131,27 @@ class _MainShellState extends State<MainShell> {
   bool get _isCreatingOrEditing => _isCreating || _editingInline;
 
   void _openPictogramCreator() {
+    final returnIndex = _selectedIndex;
     setState(() {
       _resetOpenViews();
+      _creationReturnIndex = returnIndex;
       _selectedIndex = 0;
       _creatingPictogram = true;
     });
   }
 
   void _openFolderCreator() {
+    final returnIndex = _selectedIndex;
     setState(() {
       _resetOpenViews();
+      _creationReturnIndex = returnIndex;
       _selectedIndex = 1;
       _creatingFolder = true;
     });
   }
 
   void _finishCreation(BuildContext context, String message) {
-    setState(_clearCreation);
+    setState(_returnFromCreation);
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message)),
@@ -154,12 +159,21 @@ class _MainShellState extends State<MainShell> {
   }
 
   void _cancelCreation() {
-    setState(_clearCreation);
+    setState(_returnFromCreation);
   }
 
   void _clearCreation() {
     _creatingPictogram = false;
     _creatingFolder = false;
+    _creationReturnIndex = null;
+  }
+
+  void _returnFromCreation() {
+    final returnIndex = _creationReturnIndex;
+    _clearCreation();
+    if (returnIndex != null) {
+      _selectedIndex = returnIndex;
+    }
   }
 
   void _resetOpenViews() {
