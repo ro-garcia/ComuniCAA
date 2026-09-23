@@ -76,7 +76,7 @@ class _MainShellState extends State<MainShell> {
       ),
       const SearchScreen(),
       const KeyboardScreen(),
-      if (settings.isCaregiverMode) const SettingsScreen(),
+      const SettingsScreen(),
     ];
 
     if (_selectedIndex >= screens.length) {
@@ -95,7 +95,7 @@ class _MainShellState extends State<MainShell> {
           });
         },
         onCustomizePressed: () => _enterEditorMode(context),
-        onSettingsPressed: () => _openSettingsInCaregiverMode(context),
+        onSettingsPressed: _openSettings,
       ),
       floatingActionButton: settings.isCaregiverMode && !_isCreating
           ? Padding(
@@ -176,9 +176,7 @@ class _MainShellState extends State<MainShell> {
     });
   }
 
-  void _openSettingsInCaregiverMode(BuildContext context) {
-    final settings = context.read<SettingsProvider>();
-    settings.enableCaregiverMode();
+  void _openSettings() {
     setState(() {
       _selectedIndex = 4;
       _resetOpenViews();
