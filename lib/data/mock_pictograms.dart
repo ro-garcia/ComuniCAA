@@ -107,6 +107,7 @@ const _activityNames = <String>[
   'guardar',
   'hablar',
   'hacer',
+  'hacer pis',
   'ir',
   'jugar',
   'mirar',
@@ -126,6 +127,17 @@ const _activityNames = <String>[
   'trabajo en grupo',
 ];
 
+const _initialBoardNames = <String>[
+  'hola',
+  'no patear',
+  'abrazo',
+  'dibujar',
+  'pintar',
+  'no gritar',
+  'hacer pis',
+  'comer',
+];
+
 Pictogram _imported({
   required String name,
   required String categoryId,
@@ -139,6 +151,7 @@ Pictogram _imported({
     imagePath: 'assets/pictograms/imported/${_assetNameFromName(name)}.png',
     imageType: PictogramImageType.assetRaster,
     audioPath: 'audio/pictograms/${_assetNameFromName(name)}.mp3',
+    onBoard: _initialBoardNames.contains(name),
     position: position,
   );
 }
