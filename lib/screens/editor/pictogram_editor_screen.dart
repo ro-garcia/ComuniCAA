@@ -9,6 +9,7 @@ import '../../data/mock_categories.dart';
 import '../../models/pictogram.dart';
 import '../../providers/category_provider.dart';
 import '../../providers/pictogram_provider.dart';
+import '../../widgets/message_bar.dart';
 import '../../widgets/pictogram_image.dart';
 import 'image_source_sheet.dart';
 
@@ -82,131 +83,139 @@ class _PictogramEditorScreenState extends State<PictogramEditorScreen> {
 
     return Scaffold(
       appBar: AppBar(title: Text(title)),
-      body: SafeArea(
-        child: Form(
-          key: _formKey,
-          child: ListView(
-            padding: const EdgeInsets.all(18),
-            children: [
-              TextFormField(
-                controller: _nameController,
-                textCapitalization: TextCapitalization.sentences,
-                decoration: const InputDecoration(
-                  labelText: 'Nombre del pictograma',
-                ),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Escribe un nombre';
-                  }
-                  return null;
-                },
-              ),
-              if (!widget.folderMode) ...[
-                const SizedBox(height: 14),
-                TextFormField(
-                  controller: _spokenTextController,
-                  textCapitalization: TextCapitalization.sentences,
-                  decoration: const InputDecoration(
-                    labelText: 'Texto que pronunciará',
-                  ),
-                ),
-                const SizedBox(height: 14),
-                DropdownButtonFormField<String>(
-                  initialValue: destinationId,
-                  decoration: const InputDecoration(
-                    labelText: 'Categoría o carpeta',
-                  ),
-                  items: [
-                    ...categories.map(
-                      (category) => DropdownMenuItem(
-                        value: category.id,
-                        child: Text(category.name),
+      body: Column(
+        children: [
+          const MessageBar(forceVisible: true),
+          Expanded(
+            child: SafeArea(
+              top: false,
+              child: Form(
+                key: _formKey,
+                child: ListView(
+                  padding: const EdgeInsets.all(18),
+                  children: [
+                    TextFormField(
+                      controller: _nameController,
+                      textCapitalization: TextCapitalization.sentences,
+                      decoration: const InputDecoration(
+                        labelText: 'Nombre del pictograma',
                       ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Escribe un nombre';
+                        }
+                        return null;
+                      },
                     ),
-                    ...folders.map(
-                      (folder) => DropdownMenuItem(
-                        value: folder.id,
-                        child: Row(
-                          children: [
-                            const Icon(Icons.folder_outlined, size: 20),
-                            const SizedBox(width: 8),
-                            Text(folder.label),
-                          ],
+                    if (!widget.folderMode) ...[
+                      const SizedBox(height: 14),
+                      TextFormField(
+                        controller: _spokenTextController,
+                        textCapitalization: TextCapitalization.sentences,
+                        decoration: const InputDecoration(
+                          labelText: 'Texto que pronunciará',
                         ),
                       ),
+                      const SizedBox(height: 14),
+                      DropdownButtonFormField<String>(
+                        initialValue: destinationId,
+                        decoration: const InputDecoration(
+                          labelText: 'Categoría o carpeta',
+                        ),
+                        items: [
+                          ...categories.map(
+                            (category) => DropdownMenuItem(
+                              value: category.id,
+                              child: Text(category.name),
+                            ),
+                          ),
+                          ...folders.map(
+                            (folder) => DropdownMenuItem(
+                              value: folder.id,
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.folder_outlined, size: 20),
+                                  const SizedBox(width: 8),
+                                  Text(folder.label),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                        onChanged: (value) {
+                          if (value == null) return;
+                          final selectedFolder = folders.any(
+                            (folder) => folder.id == value,
+                          );
+                          setState(() {
+                            _parentFolderId = selectedFolder ? value : null;
+                            _categoryId = selectedFolder ? _categoryId : value;
+                          });
+                        },
+                        validator: (value) =>
+                            value == null ? 'Selecciona una categoría' : null,
+                      ),
+                    ],
+                    const SizedBox(height: 18),
+                    _ImagePreview(
+                      imagePath: _imagePath,
+                      imageType: _imageType,
+                      label: _nameController.text,
+                      onTap: _pickImage,
+                      onRemove: _imagePath == null
+                          ? null
+                          : () => setState(() {
+                                _imagePath = null;
+                                _imageType = null;
+                              }),
+                      savingImage: _savingImage,
+                    ),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 12,
+                      children: [
+                        FilledButton.icon(
+                          icon: const Icon(Icons.camera_alt_outlined),
+                          label: const Text('Tomar fotografía'),
+                          onPressed: _savingImage
+                              ? null
+                              : () => _pickFromSource(ImageSource.camera),
+                        ),
+                        FilledButton.tonalIcon(
+                          icon: const Icon(Icons.photo_library_outlined),
+                          label: const Text('Elegir desde galería'),
+                          onPressed: _savingImage
+                              ? null
+                              : () => _pickFromSource(ImageSource.gallery),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 18),
+                    if (!widget.folderMode)
+                      SwitchListTile(
+                        value: _favorite,
+                        title: const Text('Favorito'),
+                        onChanged: (value) => setState(() => _favorite = value),
+                      ),
+                    const SizedBox(height: 24),
+                    FilledButton.icon(
+                      icon: const Icon(Icons.save_outlined),
+                      label: Text(
+                        widget.folderMode
+                            ? 'Guardar carpeta'
+                            : _isEditing
+                                ? 'Guardar cambios'
+                                : 'Guardar pictograma',
+                      ),
+                      onPressed: _savePictogram,
                     ),
                   ],
-                  onChanged: (value) {
-                    if (value == null) return;
-                    final selectedFolder = folders.any(
-                      (folder) => folder.id == value,
-                    );
-                    setState(() {
-                      _parentFolderId = selectedFolder ? value : null;
-                      _categoryId = selectedFolder ? _categoryId : value;
-                    });
-                  },
-                  validator: (value) =>
-                      value == null ? 'Selecciona una categoría' : null,
                 ),
-              ],
-              const SizedBox(height: 18),
-              _ImagePreview(
-                imagePath: _imagePath,
-                imageType: _imageType,
-                label: _nameController.text,
-                onTap: _pickImage,
-                onRemove: _imagePath == null
-                    ? null
-                    : () => setState(() {
-                          _imagePath = null;
-                          _imageType = null;
-                        }),
-                savingImage: _savingImage,
               ),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 12,
-                runSpacing: 12,
-                children: [
-                  FilledButton.icon(
-                    icon: const Icon(Icons.camera_alt_outlined),
-                    label: const Text('Tomar fotografía'),
-                    onPressed: _savingImage
-                        ? null
-                        : () => _pickFromSource(ImageSource.camera),
-                  ),
-                  FilledButton.tonalIcon(
-                    icon: const Icon(Icons.photo_library_outlined),
-                    label: const Text('Elegir desde galería'),
-                    onPressed: _savingImage
-                        ? null
-                        : () => _pickFromSource(ImageSource.gallery),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 18),
-              if (!widget.folderMode)
-                SwitchListTile(
-                  value: _favorite,
-                  title: const Text('Favorito'),
-                  onChanged: (value) => setState(() => _favorite = value),
-                ),
-              const SizedBox(height: 24),
-              FilledButton.icon(
-                icon: const Icon(Icons.save_outlined),
-                label: Text(
-                  widget.folderMode
-                      ? 'Guardar carpeta'
-                      : _isEditing
-                          ? 'Guardar cambios'
-                          : 'Guardar pictograma',
-                ),
-                onPressed: _savePictogram,
-              ),
-            ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
